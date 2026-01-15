@@ -1,0 +1,20 @@
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Env
+.env
+.env.*
+
+# Node (React Native/Expo)
+node_modules/
+
+# Dart/Flutter
+.dart_tool/
+build/
