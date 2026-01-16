@@ -4,6 +4,14 @@ A new Flutter project.
 
 ## Getting Started
 
+## Splash generation
+
+Run the following when you update the splash configuration:
+
+```bash
+dart run flutter_native_splash:create
+```
+
 This project is a starting point for a Flutter application.
 
 A few resources to get you started if this is your first Flutter project:
