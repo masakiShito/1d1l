@@ -117,9 +117,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
-                      _PreviewLine(text: selectedLog.line1),
-                      _PreviewLine(text: selectedLog.line2),
-                      _PreviewLine(text: selectedLog.line3),
+                      _PreviewText(text: selectedLog.text),
                     ],
                   ),
                 ),
@@ -131,8 +129,8 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 }
 
-class _PreviewLine extends StatelessWidget {
-  const _PreviewLine({required this.text});
+class _PreviewText extends StatelessWidget {
+  const _PreviewText({required this.text});
 
   final String text;
 

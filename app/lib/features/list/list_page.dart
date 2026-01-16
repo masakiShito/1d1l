@@ -4,7 +4,6 @@ import '../../core/model/daily_log.dart';
 import '../../core/utils/date_key.dart';
 
 class ListPage extends StatefulWidget {
-  // List and detail view for saved logs.
   const ListPage({super.key, required this.logs, required this.selectedDateKey});
 
   final Map<String, DailyLog> logs;
@@ -57,13 +56,14 @@ class _ListPageState extends State<ListPage> {
         children: [
           Expanded(
             child: keys.isEmpty
-                ? const Center(child: Text('まだ日記がありません'))
+                ? const Center(child: Text('まだログがありません'))
                 : ListView.separated(
                     itemCount: keys.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final key = keys[index];
                       final date = dateFromKey(key);
+                      final log = widget.logs[key];
                       final isSelected = key == _selectedKey;
                       return Card(
                         color: isSelected
@@ -80,6 +80,11 @@ class _ListPageState extends State<ListPage> {
                         ),
                         child: ListTile(
                           title: Text(formatDisplayDate(date)),
+                          subtitle: Text(
+                            _previewText(log?.text ?? ''),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () => setState(() => _selectedKey = key),
                         ),
@@ -94,6 +99,13 @@ class _ListPageState extends State<ListPage> {
       ),
     );
   }
+
+  String _previewText(String text) {
+    if (text.trim().isEmpty) {
+      return '(未記入)';
+    }
+    return text.replaceAll('\n', ' ');
+  }
 }
 
 class _DetailSection extends StatelessWidget {
@@ -105,6 +117,7 @@ class _DetailSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = dateFromKey(dateKey);
+    final displayText = log.text.trim().isEmpty ? '(未記入)' : log.text;
 
     return Card(
       elevation: 2,
@@ -121,46 +134,10 @@ class _DetailSection extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
-            _LineCard(label: '1行目', text: log.line1),
-            _LineCard(label: '2行目', text: log.line2),
-            _LineCard(label: '3行目', text: log.line3),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LineCard extends StatelessWidget {
-  const _LineCard({required this.label, required this.text});
-
-  final String label;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final displayText = text.isEmpty ? '(未記入)' : text;
-
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 8),
-      color: Colors.blueGrey.shade50,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
             Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.blueGrey,
-                  ),
+              displayText,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 4),
-            Text(displayText),
           ],
         ),
       ),
