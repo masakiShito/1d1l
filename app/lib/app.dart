@@ -111,7 +111,7 @@ class OneDayOneLogApp extends StatelessWidget {
           unselectedIconTheme: IconThemeData(color: AppColors.textSecondary),
         ),
         dividerColor: AppColors.divider,
-        cardTheme: const CardTheme(
+        cardTheme: const CardThemeData(
           color: AppColors.surface,
           surfaceTintColor: Colors.transparent,
         ),
