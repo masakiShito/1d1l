@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/model/daily_log.dart';
+import 'core/model/diary_template.dart';
+import 'core/model/question.dart';
 import 'core/storage/log_repository.dart';
-import 'core/storage/prompt_settings.dart';
+import 'core/storage/question_repository.dart';
+import 'core/storage/template_repository.dart';
 import 'core/utils/date_key.dart';
 import 'features/calendar/calendar_page.dart';
 import 'features/list/list_page.dart';
@@ -48,9 +51,12 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   final LogRepository _repository = LogRepository();
-  PromptSettingsStorage? _promptStorage;
+  final QuestionRepository _questionRepository = QuestionRepository();
+  final TemplateRepository _templateRepository = TemplateRepository();
   Map<String, DailyLog> _logs = {};
-  PromptSettings _promptSettings = PromptSettings.defaults;
+  List<Question> _questions = [];
+  List<DiaryTemplate> _templates = [];
+  DiaryTemplate? _selectedTemplate;
   int _currentIndex = 0;
   String? _selectedDateKey;
   bool _isLoading = true;
@@ -62,16 +68,37 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _loadInitialData() async {
-    final storage = await PromptSettingsStorage.create();
     final logs = await _repository.loadAll();
-    final prompts = await storage.load();
+    final questions = await _questionRepository.loadAll();
+    final templates = await _templateRepository.loadAll();
+    final todayKey = dateKeyFromDate(DateTime.now());
+    final selectedKey = _selectedDateKey ?? todayKey;
+    final selectedTemplate = _templateForLog(templates, logs[selectedKey]);
     setState(() {
-      _promptStorage = storage;
       _logs = logs;
-      _promptSettings = prompts;
-      _selectedDateKey ??= dateKeyFromDate(DateTime.now());
+      _questions = questions;
+      _templates = templates;
+      _selectedTemplate = selectedTemplate;
+      _selectedDateKey ??= selectedKey;
       _isLoading = false;
     });
+  }
+
+  DiaryTemplate _templateForLog(
+    List<DiaryTemplate> templates,
+    DailyLog? log,
+  ) {
+    final templateId = log?.templateId;
+    if (templateId != null) {
+      final matched = templates.where((template) => template.id == templateId);
+      if (matched.isNotEmpty) {
+        return matched.first;
+      }
+    }
+    return templates.firstWhere(
+      (template) => template.isDefault,
+      orElse: () => templates.first,
+    );
   }
 
   Future<void> _saveLog(
@@ -79,12 +106,14 @@ class _HomeShellState extends State<HomeShell> {
     String line1,
     String line2,
     String line3,
+    String templateId,
   ) async {
     final log = DailyLog(
       line1: line1,
       line2: line2,
       line3: line3,
       updatedAt: DateTime.now(),
+      templateId: templateId,
     );
     await _repository.upsert(dateKey, log);
     setState(() {
@@ -94,23 +123,32 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   void _handleCalendarSelection(DateTime selectedDate) {
+    final key = dateKeyFromDate(selectedDate);
     setState(() {
-      _selectedDateKey = dateKeyFromDate(selectedDate);
+      _selectedDateKey = key;
       _currentIndex = 0;
+      _selectedTemplate = _templateForLog(_templates, _logs[key]);
     });
   }
 
   void _openSettings() {
-    final storage = _promptStorage;
-    if (storage == null) {
-      return;
-    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => SettingsPage(
-          initialSettings: _promptSettings,
-          storage: storage,
-          onSaved: (settings) => setState(() => _promptSettings = settings),
+          initialQuestions: _questions,
+          initialTemplates: _templates,
+          questionRepository: _questionRepository,
+          templateRepository: _templateRepository,
+          onSaved: (questions, templates) {
+            final selectedKey =
+                _selectedDateKey ?? dateKeyFromDate(DateTime.now());
+            setState(() {
+              _questions = questions;
+              _templates = templates;
+              _selectedTemplate =
+                  _templateForLog(templates, _logs[selectedKey]);
+            });
+          },
         ),
       ),
     );
@@ -121,6 +159,10 @@ class _HomeShellState extends State<HomeShell> {
     final todayKey = dateKeyFromDate(DateTime.now());
     final selectedKey = _selectedDateKey ?? todayKey;
     final selectedLog = _logs[selectedKey];
+    final selectedTemplate = _selectedTemplate ??
+        (_templates.isNotEmpty
+            ? _templateForLog(_templates, selectedLog)
+            : null);
 
     return Scaffold(
       appBar: AppBar(
@@ -142,7 +184,12 @@ class _HomeShellState extends State<HomeShell> {
                 WritePage(
                   dateKey: selectedKey,
                   log: selectedLog,
-                  promptSettings: _promptSettings,
+                  questions: _questions,
+                  templates: _templates,
+                  selectedTemplate: selectedTemplate,
+                  onTemplateChanged: (template) {
+                    setState(() => _selectedTemplate = template);
+                  },
                   onSave: _saveLog,
                 ),
                 CalendarPage(
