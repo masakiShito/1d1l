@@ -1,14 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../../core/model/daily_log.dart';
+import '../../core/storage/prompt_settings.dart';
 import '../../core/utils/date_key.dart';
 
 class WritePage extends StatefulWidget {
-  // Editing view for today's log.
-  const WritePage({super.key, required this.todayLog, required this.onSave});
+  // Editing view for selected day's log.
+  const WritePage({
+    super.key,
+    required this.dateKey,
+    required this.log,
+    required this.promptSettings,
+    required this.onSave,
+  });
 
-  final DailyLog? todayLog;
-  final Future<void> Function(String line1, String line2, String line3) onSave;
+  final String dateKey;
+  final DailyLog? log;
+  final PromptSettings promptSettings;
+  final Future<void> Function(
+    String dateKey,
+    String line1,
+    String line2,
+    String line3,
+  ) onSave;
 
   @override
   State<WritePage> createState() => _WritePageState();
@@ -22,14 +36,14 @@ class _WritePageState extends State<WritePage> {
   @override
   void initState() {
     super.initState();
-    _applyLog(widget.todayLog);
+    _applyLog(widget.log);
   }
 
   @override
   void didUpdateWidget(covariant WritePage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.todayLog != widget.todayLog) {
-      _applyLog(widget.todayLog);
+    if (oldWidget.dateKey != widget.dateKey || oldWidget.log != widget.log) {
+      _applyLog(widget.log);
     }
   }
 
@@ -49,8 +63,9 @@ class _WritePageState extends State<WritePage> {
 
   @override
   Widget build(BuildContext context) {
-    final today = DateTime.now();
-    final dateLabel = formatDisplayDate(today);
+    final date = dateFromKey(widget.dateKey);
+    final dateLabel = formatDisplayDate(date);
+    final prompts = widget.promptSettings.asList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -58,7 +73,7 @@ class _WritePageState extends State<WritePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '今日の日記',
+            '日記を書く',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -73,17 +88,17 @@ class _WritePageState extends State<WritePage> {
           const SizedBox(height: 20),
           _InputCard(
             label: '1行目',
-            hintText: '今日あった良いことは？',
+            hintText: prompts[0],
             controller: _line1Controller,
           ),
           _InputCard(
             label: '2行目',
-            hintText: '今日学んだことは？',
+            hintText: prompts[1],
             controller: _line2Controller,
           ),
           _InputCard(
             label: '3行目',
-            hintText: '明日やりたいことは？',
+            hintText: prompts[2],
             controller: _line3Controller,
           ),
           const SizedBox(height: 12),
@@ -92,6 +107,7 @@ class _WritePageState extends State<WritePage> {
             child: ElevatedButton.icon(
               onPressed: () async {
                 await widget.onSave(
+                  widget.dateKey,
                   _line1Controller.text,
                   _line2Controller.text,
                   _line3Controller.text,

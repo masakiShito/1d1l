@@ -6,10 +6,16 @@ import '../../core/utils/date_key.dart';
 
 class CalendarPage extends StatefulWidget {
   // Calendar view with log markers.
-  const CalendarPage({super.key, required this.logs, required this.onSelectLog});
+  const CalendarPage({
+    super.key,
+    required this.logs,
+    required this.selectedDateKey,
+    required this.onSelectDate,
+  });
 
   final Map<String, DailyLog> logs;
-  final ValueChanged<String> onSelectLog;
+  final String selectedDateKey;
+  final ValueChanged<DateTime> onSelectDate;
 
   @override
   State<CalendarPage> createState() => _CalendarPageState();
@@ -22,8 +28,19 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   void initState() {
     super.initState();
-    _focusedDay = DateTime.now();
-    _selectedDay = _focusedDay;
+    _selectedDay = dateFromKey(widget.selectedDateKey);
+    _focusedDay = _selectedDay ?? DateTime.now();
+  }
+
+  @override
+  void didUpdateWidget(covariant CalendarPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedDateKey != widget.selectedDateKey) {
+      setState(() {
+        _selectedDay = dateFromKey(widget.selectedDateKey);
+        _focusedDay = _selectedDay ?? DateTime.now();
+      });
+    }
   }
 
   bool _hasLog(DateTime day) {
@@ -55,10 +72,7 @@ class _CalendarPageState extends State<CalendarPage> {
                   _selectedDay = selectedDay;
                   _focusedDay = focusedDay;
                 });
-                final key = dateKeyFromDate(selectedDay);
-                if (widget.logs.containsKey(key)) {
-                  widget.onSelectLog(key);
-                }
+                widget.onSelectDate(selectedDay);
               },
               onPageChanged: (focusedDay) {
                 _focusedDay = focusedDay;
