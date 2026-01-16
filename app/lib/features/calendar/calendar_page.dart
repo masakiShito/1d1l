@@ -53,6 +53,7 @@ class _CalendarPageState extends State<CalendarPage> {
     final selectedLog = _selectedDay == null
         ? null
         : widget.logs[dateKeyFromDate(_selectedDay!)];
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -81,22 +82,46 @@ class _CalendarPageState extends State<CalendarPage> {
               headerStyle: HeaderStyle(
                 formatButtonVisible: false,
                 titleCentered: true,
-                leftChevronIcon: const Icon(Icons.chevron_left),
-                rightChevronIcon: const Icon(Icons.chevron_right),
+                leftChevronIcon: Icon(
+                  Icons.chevron_left,
+                  color: colorScheme.primary,
+                ),
+                rightChevronIcon: Icon(
+                  Icons.chevron_right,
+                  color: colorScheme.primary,
+                ),
                 titleTextStyle: Theme.of(context).textTheme.titleMedium!,
               ),
               calendarStyle: CalendarStyle(
                 todayDecoration: BoxDecoration(
-                  color: Colors.blueGrey.shade200,
+                  color: colorScheme.primaryContainer,
                   shape: BoxShape.circle,
+                ),
+                todayTextStyle: TextStyle(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
                 ),
                 selectedDecoration: BoxDecoration(
-                  color: Colors.blueGrey.shade600,
+                  color: colorScheme.primaryContainer,
+                  border: Border.all(
+                    color: colorScheme.primary,
+                    width: 1.5,
+                  ),
                   shape: BoxShape.circle,
                 ),
-                markerDecoration: const BoxDecoration(
-                  color: Colors.blueGrey,
+                selectedTextStyle: TextStyle(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+                markerDecoration: BoxDecoration(
+                  color: colorScheme.primary,
                   shape: BoxShape.circle,
+                ),
+                defaultTextStyle: TextStyle(color: colorScheme.onSurface),
+                weekendTextStyle:
+                    TextStyle(color: colorScheme.onSurfaceVariant),
+                outsideTextStyle: TextStyle(
+                  color: colorScheme.onSurfaceVariant.withOpacity(0.6),
                 ),
               ),
             ),
