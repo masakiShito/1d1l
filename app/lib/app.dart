@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/model/daily_log.dart';
 import 'core/storage/log_repository.dart';
+import 'core/theme/app_colors.dart';
 import 'core/utils/date_key.dart';
 import 'features/calendar/calendar_page.dart';
 import 'features/list/list_page.dart';
@@ -16,12 +17,104 @@ class OneDayOneLogApp extends StatelessWidget {
     return MaterialApp(
       title: '1D1L',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blueGrey,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF6F7FB),
         useMaterial3: true,
+        colorScheme: const ColorScheme(
+          brightness: Brightness.light,
+          primary: AppColors.primary,
+          onPrimary: AppColors.onPrimary,
+          primaryContainer: AppColors.primaryContainer,
+          onPrimaryContainer: AppColors.primary,
+          secondary: AppColors.primary,
+          onSecondary: AppColors.onPrimary,
+          secondaryContainer: AppColors.primaryContainer,
+          onSecondaryContainer: AppColors.primary,
+          tertiary: AppColors.primary,
+          onTertiary: AppColors.onPrimary,
+          tertiaryContainer: AppColors.primaryContainer,
+          onTertiaryContainer: AppColors.primary,
+          error: Color(0xFFDC2626),
+          onError: Color(0xFFFFFFFF),
+          errorContainer: Color(0xFFFEE2E2),
+          onErrorContainer: Color(0xFF7F1D1D),
+          background: AppColors.background,
+          onBackground: AppColors.textPrimary,
+          surface: AppColors.surface,
+          onSurface: AppColors.textPrimary,
+          surfaceVariant: AppColors.background,
+          onSurfaceVariant: AppColors.textSecondary,
+          outline: AppColors.divider,
+          outlineVariant: AppColors.divider,
+          shadow: Color(0x1F000000),
+          scrim: Color(0x33000000),
+          inverseSurface: AppColors.textPrimary,
+          onInverseSurface: AppColors.surface,
+          inversePrimary: AppColors.primaryContainer,
+          surfaceTint: AppColors.primary,
+        ),
+        scaffoldBackgroundColor: AppColors.background,
+        textTheme: ThemeData.light().textTheme.apply(
+              bodyColor: AppColors.textPrimary,
+              displayColor: AppColors.textPrimary,
+            ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.surface,
+          foregroundColor: AppColors.textPrimary,
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: IconThemeData(color: AppColors.primary),
+          actionsIconTheme: IconThemeData(color: AppColors.primary),
+          titleTextStyle: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: AppColors.divider,
+          thickness: 1,
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          hintStyle: TextStyle(color: AppColors.textHint),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: AppColors.divider),
+          ),
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+          ),
+        ),
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: AppColors.primary,
+          selectionColor: AppColors.primaryContainer,
+          selectionHandleColor: AppColors.primary,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.onPrimary,
+            disabledBackgroundColor: AppColors.primaryContainer,
+            disabledForegroundColor: AppColors.textSecondary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: AppColors.surface,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.textSecondary,
+          selectedIconTheme: IconThemeData(color: AppColors.primary),
+          unselectedIconTheme: IconThemeData(color: AppColors.textSecondary),
+        ),
+        dividerColor: AppColors.divider,
+        cardTheme: const CardTheme(
+          color: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+        ),
       ),
       locale: const Locale('ja', 'JP'),
       supportedLocales: const [Locale('ja', 'JP')],

@@ -95,9 +95,9 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
 flutter_native_splash:
-  color: "#1F2937"
+  color: "#00BF63"
   android: true
   ios: true
   macos: true
   android_12:
-    color: "#1F2937"
+    color: "#00BF63"

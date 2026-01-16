@@ -48,6 +48,7 @@ class _ListPageState extends State<ListPage> {
   Widget build(BuildContext context) {
     final keys = _sortedKeys();
     final selectedLog = _selectedKey == null ? null : widget.logs[_selectedKey!];
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -67,26 +68,48 @@ class _ListPageState extends State<ListPage> {
                       final isSelected = key == _selectedKey;
                       return Card(
                         color: isSelected
-                            ? Colors.blueGrey.shade50
-                            : Colors.white,
+                            ? colorScheme.primaryContainer
+                            : colorScheme.surface,
                         elevation: 1,
+                        clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                           side: BorderSide(
                             color: isSelected
-                                ? Colors.blueGrey.shade200
+                                ? colorScheme.primary
                                 : Colors.transparent,
                           ),
                         ),
-                        child: ListTile(
-                          title: Text(formatDisplayDate(date)),
-                          subtitle: Text(
-                            _previewText(log?.text ?? ''),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
+                        child: InkWell(
+                          splashColor: colorScheme.primaryContainer,
+                          highlightColor:
+                              colorScheme.primaryContainer.withOpacity(0.5),
                           onTap: () => setState(() => _selectedKey = key),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                left: BorderSide(
+                                  color: colorScheme.primary,
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                            child: ListTile(
+                              title: Text(formatDisplayDate(date)),
+                              subtitle: Text(
+                                _previewText(log?.text ?? ''),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              trailing: Icon(
+                                Icons.chevron_right,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -131,7 +154,9 @@ class _DetailSection extends StatelessWidget {
           children: [
             Text(
               formatDisplayDate(date),
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: 12),
             Text(
