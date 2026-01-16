@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/model/daily_log.dart';
-import '../../core/storage/prompt_settings.dart';
+import '../../core/model/diary_template.dart';
+import '../../core/model/question.dart';
 import '../../core/utils/date_key.dart';
 
 class WritePage extends StatefulWidget {
@@ -10,18 +11,25 @@ class WritePage extends StatefulWidget {
     super.key,
     required this.dateKey,
     required this.log,
-    required this.promptSettings,
+    required this.questions,
+    required this.templates,
+    required this.selectedTemplate,
+    required this.onTemplateChanged,
     required this.onSave,
   });
 
   final String dateKey;
   final DailyLog? log;
-  final PromptSettings promptSettings;
+  final List<Question> questions;
+  final List<DiaryTemplate> templates;
+  final DiaryTemplate? selectedTemplate;
+  final ValueChanged<DiaryTemplate> onTemplateChanged;
   final Future<void> Function(
     String dateKey,
     String line1,
     String line2,
     String line3,
+    String templateId,
   ) onSave;
 
   @override
@@ -65,7 +73,25 @@ class _WritePageState extends State<WritePage> {
   Widget build(BuildContext context) {
     final date = dateFromKey(widget.dateKey);
     final dateLabel = formatDisplayDate(date);
-    final prompts = widget.promptSettings.asList();
+    final template = widget.selectedTemplate;
+    final questionsById = {
+      for (final question in widget.questions) question.id: question
+    };
+    final prompts = template == null
+        ? const <String>[
+            '質問を選択してください',
+            '質問を選択してください',
+            '質問を選択してください',
+          ]
+        : <String>[
+            questionsById[template.slot1QuestionId]?.text ??
+                '質問を選択してください',
+            questionsById[template.slot2QuestionId]?.text ??
+                '質問を選択してください',
+            questionsById[template.slot3QuestionId]?.text ??
+                '質問を選択してください',
+          ];
+    final templateName = template?.name ?? 'テンプレート未選択';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -84,6 +110,13 @@ class _WritePageState extends State<WritePage> {
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Colors.blueGrey.shade600,
                 ),
+          ),
+          const SizedBox(height: 12),
+          _TemplateSelectorCard(
+            templateName: templateName,
+            onTap: widget.templates.isEmpty
+                ? null
+                : () => _showTemplateSheet(context, template),
           ),
           const SizedBox(height: 20),
           _InputCard(
@@ -106,11 +139,18 @@ class _WritePageState extends State<WritePage> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () async {
+                if (template == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('テンプレートを選択してください')),
+                  );
+                  return;
+                }
                 await widget.onSave(
                   widget.dateKey,
                   _line1Controller.text,
                   _line2Controller.text,
                   _line3Controller.text,
+                  template.id,
                 );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -129,6 +169,72 @@ class _WritePageState extends State<WritePage> {
         ],
       ),
     );
+  }
+
+  Future<void> _showTemplateSheet(
+    BuildContext context,
+    DiaryTemplate? currentTemplate,
+  ) async {
+    final templates = [...widget.templates]
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final selected = await showModalBottomSheet<DiaryTemplate>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'テンプレートを選択',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: templates.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final template = templates[index];
+                      final isSelected = template.id == currentTemplate?.id;
+                      return Card(
+                        color: isSelected
+                            ? Colors.blueGrey.shade50
+                            : Colors.white,
+                        elevation: 1,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: isSelected
+                                ? Colors.blueGrey.shade300
+                                : Colors.transparent,
+                          ),
+                        ),
+                        child: ListTile(
+                          title: Text(template.name),
+                          subtitle:
+                              template.isDefault ? const Text('デフォルト') : null,
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.of(context).pop(template),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (selected != null) {
+      widget.onTemplateChanged(selected);
+    }
   }
 }
 
@@ -165,6 +271,33 @@ class _InputCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _TemplateSelectorCard extends StatelessWidget {
+  const _TemplateSelectorCard({
+    required this.templateName,
+    required this.onTap,
+  });
+
+  final String templateName;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ListTile(
+        title: const Text('テンプレート'),
+        subtitle: Text(templateName),
+        trailing: const Icon(Icons.swap_horiz),
+        onTap: onTap,
       ),
     );
   }
