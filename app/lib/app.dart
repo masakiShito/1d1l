@@ -3,9 +3,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/model/daily_log.dart';
 import 'core/storage/log_repository.dart';
+import 'core/storage/prompt_settings.dart';
 import 'core/utils/date_key.dart';
 import 'features/calendar/calendar_page.dart';
 import 'features/list/list_page.dart';
+import 'features/settings/settings_page.dart';
 import 'features/write/write_page.dart';
 
 class ThreeLineDiaryApp extends StatelessWidget {
@@ -46,7 +48,9 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   final LogRepository _repository = LogRepository();
+  PromptSettingsStorage? _promptStorage;
   Map<String, DailyLog> _logs = {};
+  PromptSettings _promptSettings = PromptSettings.defaults;
   int _currentIndex = 0;
   String? _selectedDateKey;
   bool _isLoading = true;
@@ -54,52 +58,81 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void initState() {
     super.initState();
-    _loadLogs();
+    _loadInitialData();
   }
 
-  Future<void> _loadLogs() async {
+  Future<void> _loadInitialData() async {
+    final storage = await PromptSettingsStorage.create();
     final logs = await _repository.loadAll();
+    final prompts = await storage.load();
     setState(() {
+      _promptStorage = storage;
       _logs = logs;
+      _promptSettings = prompts;
+      _selectedDateKey ??= dateKeyFromDate(DateTime.now());
       _isLoading = false;
     });
   }
 
-  Future<void> _saveTodayLog(
+  Future<void> _saveLog(
+    String dateKey,
     String line1,
     String line2,
     String line3,
   ) async {
-    final todayKey = dateKeyFromDate(DateTime.now());
     final log = DailyLog(
       line1: line1,
       line2: line2,
       line3: line3,
       updatedAt: DateTime.now(),
     );
-    await _repository.upsert(todayKey, log);
+    await _repository.upsert(dateKey, log);
     setState(() {
-      _logs = {..._logs, todayKey: log};
-      _selectedDateKey ??= todayKey;
+      _logs = {..._logs, dateKey: log};
+      _selectedDateKey = dateKey;
     });
   }
 
-  void _openLogDetail(String dateKey) {
+  void _handleCalendarSelection(DateTime selectedDate) {
     setState(() {
-      _currentIndex = 2;
-      _selectedDateKey = dateKey;
+      _selectedDateKey = dateKeyFromDate(selectedDate);
+      _currentIndex = 0;
     });
+  }
+
+  void _openSettings() {
+    final storage = _promptStorage;
+    if (storage == null) {
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SettingsPage(
+          initialSettings: _promptSettings,
+          storage: storage,
+          onSaved: (settings) => setState(() => _promptSettings = settings),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final todayKey = dateKeyFromDate(DateTime.now());
-    final todayLog = _logs[todayKey];
+    final selectedKey = _selectedDateKey ?? todayKey;
+    final selectedLog = _logs[selectedKey];
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('3行日記'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: _isLoading ? null : _openSettings,
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: '設定',
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -107,12 +140,15 @@ class _HomeShellState extends State<HomeShell> {
               index: _currentIndex,
               children: [
                 WritePage(
-                  todayLog: todayLog,
-                  onSave: _saveTodayLog,
+                  dateKey: selectedKey,
+                  log: selectedLog,
+                  promptSettings: _promptSettings,
+                  onSave: _saveLog,
                 ),
                 CalendarPage(
                   logs: _logs,
-                  onSelectLog: _openLogDetail,
+                  selectedDateKey: selectedKey,
+                  onSelectDate: _handleCalendarSelection,
                 ),
                 ListPage(
                   logs: _logs,
