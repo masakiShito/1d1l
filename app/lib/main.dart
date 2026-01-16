@@ -7,5 +7,5 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Initialize Japanese date formats.
   await initializeDateFormatting('ja');
-  runApp(const ThreeLineDiaryApp());
+  runApp(const OneDayOneLogApp());
 }

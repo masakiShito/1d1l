@@ -34,12 +34,23 @@ class LogRepository {
       return {};
     }
     final decoded = jsonDecode(contents) as Map<String, dynamic>;
-    return decoded.map(
-      (key, value) => MapEntry(
-        key,
-        DailyLog.fromJson(value as Map<String, dynamic>),
-      ),
+    var needsMigration = false;
+    final logs = decoded.map(
+      (key, value) {
+        final data = value as Map<String, dynamic>;
+        final hasLegacy = data.containsKey('line1') ||
+            data.containsKey('line2') ||
+            data.containsKey('line3');
+        if (hasLegacy || !data.containsKey('text')) {
+          needsMigration = true;
+        }
+        return MapEntry(key, DailyLog.fromJson(data));
+      },
     );
+    if (needsMigration) {
+      await _persistAll(logs);
+    }
+    return logs;
   }
 
   Future<DailyLog?> get(String dateKey) async {
@@ -50,10 +61,7 @@ class LogRepository {
   Future<void> upsert(String dateKey, DailyLog log) async {
     final logs = await loadAll();
     logs[dateKey] = log;
-    final file = await _resolveFile();
-    await file.writeAsString(jsonEncode(
-      logs.map((key, value) => MapEntry(key, value.toJson())),
-    ));
+    await _persistAll(logs);
   }
 
   Future<List<DailyLogEntry>> listSortedDesc() async {
@@ -63,5 +71,12 @@ class LogRepository {
         .toList();
     entries.sort((a, b) => b.dateKey.compareTo(a.dateKey));
     return entries;
+  }
+
+  Future<void> _persistAll(Map<String, DailyLog> logs) async {
+    final file = await _resolveFile();
+    await file.writeAsString(jsonEncode(
+      logs.map((key, value) => MapEntry(key, value.toJson())),
+    ));
   }
 }
