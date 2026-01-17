@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'core/errors/app_error.dart';
+import 'core/errors/app_error_mapper.dart';
+import 'core/errors/app_error_presenter.dart';
+import 'core/errors/app_error_reporter.dart';
+import 'core/errors/validation_error.dart';
 import 'core/model/daily_log.dart';
 import 'core/storage/log_repository.dart';
 import 'core/theme/app_colors.dart';
 import 'core/utils/date_key.dart';
+import 'core/utils/input_sanitizer.dart';
+import 'core/validators/log_validator.dart';
 import 'features/calendar/calendar_page.dart';
 import 'features/list/list_page.dart';
 import 'features/write/write_page.dart';
@@ -137,10 +144,15 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   final LogRepository _repository = LogRepository();
+  final AppErrorMapper _errorMapper = const AppErrorMapper();
+  final AppErrorReporter _errorReporter = const AppErrorReporter();
+  final AppErrorPresenter _errorPresenter = const AppErrorPresenter();
+  final LogValidator _logValidator = LogValidator();
   Map<String, DailyLog> _logs = {};
   int _currentIndex = 0;
   String? _selectedDateKey;
   bool _isLoading = true;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -149,26 +161,81 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Future<void> _loadInitialData() async {
-    final logs = await _repository.loadAll();
-    final todayKey = dateKeyFromDate(DateTime.now());
-    final selectedKey = _selectedDateKey ?? todayKey;
-    setState(() {
-      _logs = logs;
-      _selectedDateKey ??= selectedKey;
-      _isLoading = false;
-    });
+    setState(() => _isLoading = true);
+    try {
+      final logs = await _repository.loadAll();
+      final todayKey = dateKeyFromDate(DateTime.now());
+      final selectedKey = _selectedDateKey ?? todayKey;
+      setState(() {
+        _logs = logs;
+        _selectedDateKey ??= selectedKey;
+        _isLoading = false;
+      });
+    } catch (error, stackTrace) {
+      final mapped = _errorMapper.map(error, stackTrace);
+      _errorReporter.report(mapped);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_errorPresenter.messageFor(mapped))),
+        );
+      }
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _saveLog(String dateKey, String text) async {
-    final log = DailyLog(
-      text: text,
-      updatedAt: DateTime.now(),
+    if (_isSaving) {
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      final normalized = InputSanitizer.normalizeText(text);
+      final validation = _logValidator.validate(normalized);
+      if (!validation.isValid) {
+        _showValidationErrors(validation);
+        return;
+      }
+      final log = DailyLog(
+        text: normalized,
+        updatedAt: DateTime.now(),
+      );
+      await _repository.upsert(dateKey, log);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _logs = {..._logs, dateKey: log};
+        _selectedDateKey = dateKey;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('保存しました')),
+      );
+    } catch (error, stackTrace) {
+      final mapped = _errorMapper.map(error, stackTrace);
+      _errorReporter.report(mapped);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_errorPresenter.messageFor(mapped))),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  void _showValidationErrors(ValidationResult result) {
+    if (!mounted || result.isValid) {
+      return;
+    }
+    _errorReporter.report(
+      AppError(
+        type: AppErrorType.validation,
+        userMessage: '入力内容を確認してください。',
+        debugMessage: result.issues.map((issue) => issue.message).join(', '),
+      ),
     );
-    await _repository.upsert(dateKey, log);
-    setState(() {
-      _logs = {..._logs, dateKey: log};
-      _selectedDateKey = dateKey;
-    });
   }
 
   void _handleCalendarSelection(DateTime selectedDate) {
@@ -199,6 +266,8 @@ class _HomeShellState extends State<HomeShell> {
                   dateKey: selectedKey,
                   log: selectedLog,
                   onSave: _saveLog,
+                  onValidationFailed: _showValidationErrors,
+                  isSaving: _isSaving,
                 ),
                 CalendarPage(
                   logs: _logs,

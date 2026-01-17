@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/errors/validation_error.dart';
 import '../../core/model/daily_log.dart';
 import '../../core/utils/date_key.dart';
+import '../../core/utils/input_sanitizer.dart';
+import '../../core/validators/log_validator.dart';
 
 class WritePage extends StatefulWidget {
   const WritePage({
@@ -9,11 +12,15 @@ class WritePage extends StatefulWidget {
     required this.dateKey,
     required this.log,
     required this.onSave,
+    required this.onValidationFailed,
+    required this.isSaving,
   });
 
   final String dateKey;
   final DailyLog? log;
   final Future<void> Function(String dateKey, String text) onSave;
+  final ValueChanged<ValidationResult> onValidationFailed;
+  final bool isSaving;
 
   @override
   State<WritePage> createState() => _WritePageState();
@@ -21,6 +28,9 @@ class WritePage extends StatefulWidget {
 
 class _WritePageState extends State<WritePage> {
   final TextEditingController _textController = TextEditingController();
+  final FocusNode _textFocusNode = FocusNode();
+  final LogValidator _validator = LogValidator();
+  String? _fieldError;
 
   @override
   void initState() {
@@ -38,12 +48,26 @@ class _WritePageState extends State<WritePage> {
 
   void _applyLog(DailyLog? log) {
     _textController.text = log?.text ?? '';
+    _fieldError = null;
   }
 
   @override
   void dispose() {
     _textController.dispose();
+    _textFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleSave() async {
+    final normalized = InputSanitizer.normalizeText(_textController.text);
+    final result = _validator.validate(normalized);
+    setState(() => _fieldError = result.firstMessageFor('text'));
+    if (!result.isValid) {
+      widget.onValidationFailed(result);
+      _textFocusNode.requestFocus();
+      return;
+    }
+    await widget.onSave(widget.dateKey, normalized);
   }
 
   @override
@@ -100,8 +124,15 @@ class _WritePageState extends State<WritePage> {
                   controller: _textController,
                   maxLines: null,
                   minLines: 4,
-                  decoration: const InputDecoration(
+                  focusNode: _textFocusNode,
+                  onChanged: (_) {
+                    if (_fieldError != null) {
+                      setState(() => _fieldError = null);
+                    }
+                  },
+                  decoration: InputDecoration(
                     hintText: '今日のログを残す…',
+                    errorText: _fieldError,
                   ),
                 ),
               ),
@@ -111,15 +142,14 @@ class _WritePageState extends State<WritePage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () async {
-                await widget.onSave(widget.dateKey, _textController.text);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('保存しました')),
-                  );
-                }
-              },
-              child: const Text('保存する'),
+              onPressed: widget.isSaving ? null : _handleSave,
+              child: widget.isSaving
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('保存する'),
             ),
           ),
         ],
