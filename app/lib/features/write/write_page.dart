@@ -5,6 +5,7 @@ import '../../core/model/daily_log.dart';
 import '../../core/utils/date_key.dart';
 import '../../core/utils/input_sanitizer.dart';
 import '../../core/validators/log_validator.dart';
+import '../../core/widgets/cloud_error_toast.dart';
 
 class WritePage extends StatefulWidget {
   const WritePage({
@@ -30,7 +31,7 @@ class _WritePageState extends State<WritePage> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _textFocusNode = FocusNode();
   final LogValidator _validator = LogValidator();
-  String? _fieldError;
+  bool _isLogEmpty = true;
 
   @override
   void initState() {
@@ -42,13 +43,14 @@ class _WritePageState extends State<WritePage> {
   void didUpdateWidget(covariant WritePage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.dateKey != widget.dateKey || oldWidget.log != widget.log) {
-      _applyLog(widget.log);
+      setState(() => _applyLog(widget.log));
     }
   }
 
   void _applyLog(DailyLog? log) {
-    _textController.text = log?.text ?? '';
-    _fieldError = null;
+    final text = log?.text ?? '';
+    _textController.text = text;
+    _isLogEmpty = _isTextEmpty(text);
   }
 
   @override
@@ -58,12 +60,33 @@ class _WritePageState extends State<WritePage> {
     super.dispose();
   }
 
+  bool _isTextEmpty(String value) {
+    return InputSanitizer.normalizeText(value).trim().isEmpty;
+  }
+
+  void _handleTextChange(String value) {
+    final isEmpty = _isTextEmpty(value);
+    if (_isLogEmpty != isEmpty) {
+      setState(() => _isLogEmpty = isEmpty);
+    }
+  }
+
+  void _showCloudError(String message) {
+    CloudErrorToast.show(
+      context,
+      message: message,
+    );
+  }
+
   Future<void> _handleSave() async {
+    if (widget.isSaving) {
+      return;
+    }
     final normalized = InputSanitizer.normalizeText(_textController.text);
     final result = _validator.validate(normalized);
-    setState(() => _fieldError = result.firstMessageFor('text'));
     if (!result.isValid) {
       widget.onValidationFailed(result);
+      _showCloudError(result.firstMessageFor('text') ?? 'ログが空欄だよ');
       _textFocusNode.requestFocus();
       return;
     }
@@ -125,14 +148,11 @@ class _WritePageState extends State<WritePage> {
                   maxLines: null,
                   minLines: 4,
                   focusNode: _textFocusNode,
-                  onChanged: (_) {
-                    if (_fieldError != null) {
-                      setState(() => _fieldError = null);
-                    }
-                  },
+                  onChanged: _handleTextChange,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _handleSave(),
                   decoration: InputDecoration(
                     hintText: '今日のログを残す…',
-                    errorText: _fieldError,
                   ),
                 ),
               ),
@@ -142,7 +162,8 @@ class _WritePageState extends State<WritePage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: widget.isSaving ? null : _handleSave,
+              onPressed:
+                  widget.isSaving || _isLogEmpty ? null : _handleSave,
               child: widget.isSaving
                   ? const SizedBox(
                       height: 18,

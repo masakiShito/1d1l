@@ -9,7 +9,14 @@ class LogValidator {
     final normalized = text.trim();
 
     if (normalized.isEmpty) {
-      return const ValidationResult([]);
+      issues.add(
+        const ValidationIssue(
+          field: 'text',
+          code: 'required',
+          message: '今日はまだ書かれてないみたい',
+        ),
+      );
+      return ValidationResult(issues);
     }
 
     if (normalized.length < minLength) {
@@ -17,7 +24,7 @@ class LogValidator {
         const ValidationIssue(
           field: 'text',
           code: 'minLength',
-          message: '本文は1文字以上で入力してください。',
+          message: 'もう少しだけ言葉を足してみよう',
         ),
       );
     }
@@ -27,7 +34,7 @@ class LogValidator {
         const ValidationIssue(
           field: 'text',
           code: 'maxLength',
-          message: '本文は500文字以内で入力してください。',
+          message: '少し長いかも。500文字以内におさめよう',
         ),
       );
     }
@@ -37,7 +44,7 @@ class LogValidator {
         const ValidationIssue(
           field: 'text',
           code: 'invalidChars',
-          message: '使用できない文字が含まれています。',
+          message: 'この文字は今は使えないみたい',
         ),
       );
     }

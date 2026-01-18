@@ -12,6 +12,7 @@ import 'core/theme/app_colors.dart';
 import 'core/utils/date_key.dart';
 import 'core/utils/input_sanitizer.dart';
 import 'core/validators/log_validator.dart';
+import 'core/widgets/cloud_error_toast.dart';
 import 'features/calendar/calendar_page.dart';
 import 'features/list/list_page.dart';
 import 'features/write/write_page.dart';
@@ -175,8 +176,9 @@ class _HomeShellState extends State<HomeShell> {
       final mapped = _errorMapper.map(error, stackTrace);
       _errorReporter.report(mapped);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_errorPresenter.messageFor(mapped))),
+        CloudErrorToast.show(
+          context,
+          message: _errorPresenter.messageFor(mapped),
         );
       }
       setState(() => _isLoading = false);
@@ -214,8 +216,9 @@ class _HomeShellState extends State<HomeShell> {
       final mapped = _errorMapper.map(error, stackTrace);
       _errorReporter.report(mapped);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_errorPresenter.messageFor(mapped))),
+        CloudErrorToast.show(
+          context,
+          message: _errorPresenter.messageFor(mapped),
         );
       }
     } finally {
@@ -229,10 +232,12 @@ class _HomeShellState extends State<HomeShell> {
     if (!mounted || result.isValid) {
       return;
     }
+    final message = result.firstMessageFor('text') ?? 'ログが空欄だよ';
+    CloudErrorToast.show(context, message: message);
     _errorReporter.report(
       AppError(
         type: AppErrorType.validation,
-        userMessage: '入力内容を確認してください。',
+        userMessage: '内容をそっと見直してみてね。',
         debugMessage: result.issues.map((issue) => issue.message).join(', '),
       ),
     );
